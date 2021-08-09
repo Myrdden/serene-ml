@@ -1,0 +1,19 @@
+{
+  "name": "serene-ml",
+  "version": "1.0.0",
+  "author": "Myrdden",
+  "description": "Reactive DOM Markup Using Serene",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myrdden/serene-ml"
+  },
+  "peerDependencies": {
+    "serene-js": "^1.0.0"
+  },
+  "keywords": [
+    "serene",
+    "reactive"
+  ],
+  "main": "index.js"
+}
