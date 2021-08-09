@@ -1,4 +1,4 @@
-import { Signal, Root, Cleanup } from 'serene';
+import { Signal, Root, Cleanup } from 'serene-js';
 import { kebab, eachPair } from './util.js';
 
 const extractSelectors = (str) => {

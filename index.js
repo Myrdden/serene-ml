@@ -1,2 +1,2 @@
-export h from './hyperscript.js';
-export Style from './css.js';
+export { default as h } from './hyperscript.js';
+export { default as Style } from './css.js';

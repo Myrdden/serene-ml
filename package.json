@@ -1,6 +1,6 @@
 {
   "name": "serene-ml",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Myrdden",
   "description": "Reactive DOM Markup Using Serene",
   "license": "MIT",
@@ -11,6 +11,9 @@
   "peerDependencies": {
     "serene-js": "^1.0.0"
   },
+	"devDependencies": {
+		"serene-js": "^1.0.0"
+	},
   "keywords": [
     "serene",
     "reactive"
