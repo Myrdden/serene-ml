@@ -1,4 +1,4 @@
-import { Effect, Cleanup, Signal, omit } from '/node_modules/reactive/reactive.js';
+import { Effect, Cleanup, Signal, omit } from 'serene';
 import { kebab, isPlain, ElementNames } from './util.js';
 import reconcile from './reconcile.js';
 

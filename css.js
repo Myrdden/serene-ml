@@ -1,4 +1,4 @@
-import { Signal, Root, Cleanup } from '/node_modules/reactive/reactive.js';
+import { Signal, Root, Cleanup } from 'serene';
 import { kebab, eachPair } from './util.js';
 
 const extractSelectors = (str) => {
