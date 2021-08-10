@@ -186,7 +186,7 @@ Object.defineProperties(RuleSet.prototype, {
 			if (meta != null) { meta.rules.set(Array.prototype.slice.call(path, 1)); }
 			else {
 				meta = { index: this.dom.insertRule(rule + '{}') };
-				this.model.set(rule, meta);
+				this.model.set(rule, meta); this.bridge[meta.index] = meta;
 				meta.rules = new RuleSet(this.dom.cssRules[meta.index]);
 				meta.rules.set(Array.prototype.slice.call(path, 1));
 			}
@@ -208,18 +208,30 @@ Object.defineProperties(RuleSet.prototype, {
 		let style = path[1], value = path[2];
 		if (value == null) {
 			value = style;
+
+			if (value == null) { this.delete(rule); return; }
+
 			let disp;
 			if (meta != null) {
 				disp = meta.disposers;
 				if (disp != null) { for (const d of disp.values()) { d(); } disp.clear(); }
-				this.dom.deleteRule(meta.index);
-			} else { meta = { index: this.dom.cssRules.length }; this.model.set(rule, meta); }
+			} else { meta = { index: this.dom.cssRules.length }; this.model.set(rule, meta); this.bridge[meta.index] = meta; }
 
-			if (typeof value === 'string') {
+			if (typeof value === 'function') {
+				let disposer; Root((d) => {
+					disposer = d; let temp = value;
+					while (typeof temp == 'function') { temp = temp(); }
+					this.set(rule, temp);
+				});
+				(disp == null) && (disp = meta.disposers = new Map());
+				disp.set(rule, disposer);
+			} else if (typeof value === 'string') {
+				try { this.dom.deleteRule(meta.index); } catch {}
 				value = value.trim();
 				const next = [rule, (value[0] === '{' ? '' : '{'), value, (value[value.length - 1] === '}' ? '' : '}')].join('');
 				this.dom.insertRule(next, meta.index);
 			} else {
+				try { this.dom.deleteRule(meta.index); } catch {}
 				const fnKeys = [], fnVals = [], next = [ fixDot(rule), '{' ];
 				eachPair(normalize(value), (key, val) => {
 					if (typeof val === 'function') { fnKeys.push(key); fnVals.push(val); }
@@ -250,7 +262,7 @@ Object.defineProperties(RuleSet.prototype, {
 		if (meta != null) {
 			disp = meta.disposers;
 			if (disp != null) { const d = disp.get(style); (d != null) && d(); disp.delete(d); }
-		} else { meta = { index: dom.insertRule(rule + '{}') }; this.model.set(rule, meta); }
+		} else { meta = { index: dom.insertRule(rule + '{}') }; this.model.set(rule, meta); this.bridge[meta.index] = meta; }
 		const RuleStyle = this.dom.cssRules[meta.index].style;
 		if (typeof value === 'function') {
 			let disposer; Root((d) => {
@@ -283,7 +295,7 @@ Object.defineProperties(RuleSet.prototype, {
 			if (meta != null) { meta.rules.add(Array.prototype.slice.call(path, 1)); }
 			else {
 				meta = { index: this.dom.insertRule(rule + '{}') };
-				this.model.set(rule, meta);
+				this.model.set(rule, meta); this.bridge[meta.index] = meta;
 				meta.rules = new RuleSet(this.dom.cssRules[meta.index]);
 				meta.rules.set(Array.prototype.slice.call(path, 1));
 			}
@@ -294,8 +306,9 @@ Object.defineProperties(RuleSet.prototype, {
 		let value = path[2];
 		if (value != null) { return this.set(rule, style, value); }
 		value = path[1];
+		if (typeof value === 'function') { errorNoAddFunction(); }
 
-		if (meta == null) { meta = { index: this.dom.insertRule(rule + '{}') }; this.meta.set(rule, meta); }
+		if (meta == null) { meta = { index: this.dom.insertRule(rule + '{}') }; this.model.set(rule, meta); this.bridge[meta.index] = meta; }
 
 		if (typeof value === 'string') { value = keyVals(value); }
 		else { value = normalize(value); }
@@ -342,8 +355,8 @@ Object.defineProperties(RuleSet.prototype, {
 		if (meta.rules) {
 			if (path.length > 1) { return meta.rules.delete(...Array.prototype.slice.call(path, 1)); }
 			this.bridge.splice(meta.index, 1);
-			for (let i = meta.index; i !== this.bridge.length; i++) { bridge[i].index--; }
-			this.dom.deleteRule(meta.index);
+			for (let i = meta.index; i !== this.bridge.length; i++) { this.bridge[i].index--; }
+			try { this.dom.deleteRule(meta.index); } catch {}
 			this.model.delete(rule);
 			this.observers.has(rule) && notify(this, rule);
 			return true;
@@ -354,8 +367,8 @@ Object.defineProperties(RuleSet.prototype, {
 			const disp = meta.disposers;
 			if (disp != null) { for (const d of disp.values()) { d(); } }
 			this.bridge.splice(meta.index, 1);
-			for (let i = meta.index; i !== this.bridge.length; i++) { bridge[i].index--; }
-			this.dom.deleteRule(meta.index);
+			for (let i = meta.index; i !== this.bridge.length; i++) { this.bridge[i].index--; }
+			try { this.dom.deleteRule(meta.index); } catch {}
 			this.model.delete(rule);
 			this.observers.has(rule) && notify(this, rule);
 			return true;
@@ -367,8 +380,8 @@ Object.defineProperties(RuleSet.prototype, {
 		RuleStyle.removeProperty(style);
 		if (!RuleStyle.length) {
 			this.bridge.splice(meta.index, 1);
-			for (let i = meta.index; i !== this.bridge.length; i++) { bridge[i].index--; }
-			this.dom.deleteRule(meta.index);
+			for (let i = meta.index; i !== this.bridge.length; i++) { this.bridge[i].index--; }
+			try { this.dom.deleteRule(meta.index); } catch {}
 			this.model.delete(rule);
 		}
 		this.observers.has(rule) && notify(this, rule);
@@ -406,7 +419,7 @@ Object.defineProperties(RuleSet.prototype, {
 	size: { get: function () { return this.bridge.length; }},
 	clear: { value: function () {
 		this.model.clear(); for (let i = this.bridge.length; i--;) { this.bridge.pop(); }
-		if (this.dom.cssRules.length) { for (let i = this.dom.cssRules.length; i--;) { this.dom.deleteRule(i); }}
+		if (this.dom.cssRules.length) { for (let i = this.dom.cssRules.length; i--;) { try { this.dom.deleteRule(i); } catch {} }}
 		for (const rule of this.observers.keys()) { notify(this, rule); }
 	}},
 	entries: { value: function () {
