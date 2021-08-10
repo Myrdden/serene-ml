@@ -1,3 +1,5 @@
+export { isPlain, isPopulated } from 'serene-js';
+
 export const repeat = (times, fn, acc) => {
 	if (acc != null) { for (let i = times; i--;) { fn(i, acc); } return acc; }
 	const out = []; for (let i = times; i--;) { out[i] = fn(i); } return out;
@@ -5,7 +7,7 @@ export const repeat = (times, fn, acc) => {
 
 export const kebab = (str) => {
 	const out = [];
-	for (let i = i; i < str.length; i++) { /[A-Z]/.test(str[i]) ? out.push('-', str[i].toLowerCase()) : out.push(str[i]); }
+	for (let i = 0; i < str.length; i++) { /[A-Z]/.test(str[i]) ? out.push('-', str[i].toLowerCase()) : out.push(str[i]); }
 	return out.join('');
 }
 
@@ -44,15 +46,6 @@ export const hash = (str) => {
 	let h = 5381;
 	for (let i = str.length; i--;) { h = (h * 33) ^ str.charCodeAt(i); }
 	return (hash >>> 0).toString(36);
-}
-
-export const isPlain = (obj) => obj != null && typeof obj === 'object' && (obj.__proto__ === Object.prototype || Object.getPrototypeOf(obj) === Object.prototype || Object.prototype.toString.call(obj) === '[object Object]');
-
-export const isPopulated = (obj) => {
-	if (obj == null) { return false; }
-	if (obj instanceof Set || obj instanceof Map) { return !!obj.size; }
-	for (let i in obj) { return true; }
-	return false;
 }
 
 export const ElementNames = new Set([

@@ -1,5 +1,5 @@
 import { Signal, Root, Cleanup } from 'serene-js';
-import { kebab, eachPair } from './util.js';
+import { kebab, eachPair, ElementNames } from './util.js';
 
 const extractSelectors = (str) => {
 
@@ -17,7 +17,7 @@ const normalize = (map) => {
 const fixDot = (rule) => {
 	if (rule[0] === '.') { return rule; }
 	const part = /^[a-z\-]+/.exec(rule)[0];
-	if (Elements.has(part)) { return rule; }
+	if (ElementNames.has(part)) { return rule; }
 	return '.' + rule;
 }
 
@@ -119,9 +119,8 @@ const stylesheetDelete = (buffer, bump, path) => {
 	else { queue.delete.push(Array.prototype.slice.call(path, 1)); }
 	bump(true);
 }
-const stylesheetToString = (style, format) => {
-	const rules = style.elem.sheet.cssRules, out = [];
-	console.log(rules);
+const stylesheetToString = (stylesheet, format) => {
+	const rules = stylesheet.dom.cssRules, out = [];
 	for (let i = 0; i !== rules.length; i++) { out.push(rules[i].cssText, (format ? '\n' : ' ')); }
 	return out.join('');
 }
@@ -138,7 +137,7 @@ Object.defineProperties(Style, {
 	values: { value: function () { return globalRules.values(); }},
 	[Symbol.iterator]: { value: function () { return globalRules.entries(); }},
 	forEach: { value: function (fn) { globalRules.forEach(fn); }},
-	toString: { value: function (format) { return stylesheetToString(this, format); }},
+	toString: { value: function (format) { return stylesheetToString(globalRules, format); }},
 	watch: { value: function (rule, fn) { return globalRules.watch(rule, fn); }},
 	unwatch: { value: function (rule, fn) { return globalRules.unwatch(rule, fn); }},
 });
@@ -155,7 +154,7 @@ Object.defineProperties(Style.prototype, {
 	values: { value: function () { return this.rules.values(); }},
 	[Symbol.iterator]: { value: function () { return this.rules.entries(); }},
 	forEach: { value: function (fn) { this.rules.forEach(fn); }},
-	toString: { value: function (format) { return stylesheetToString(this, format); }},
+	toString: { value: function (format) { return stylesheetToString(this.rules, format); }},
 	watch: { value: function (rule, fn) { return this.rules.watch(rule, fn); }},
 	unwatch: { value: function (rule, fn) { return this.rules.unwatch(rule, fn); }}
 });
