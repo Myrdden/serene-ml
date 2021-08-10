@@ -1,4 +1,4 @@
-export { isPlain, isPopulated } from 'serene-js';
+export { isPlain, isPopulated, eachPair } from 'serene-js';
 
 export const repeat = (times, fn, acc) => {
 	if (acc != null) { for (let i = times; i--;) { fn(i, acc); } return acc; }
@@ -9,37 +9,6 @@ export const kebab = (str) => {
 	const out = [];
 	for (let i = 0; i < str.length; i++) { /[A-Z]/.test(str[i]) ? out.push('-', str[i].toLowerCase()) : out.push(str[i]); }
 	return out.join('');
-}
-
-export const eachPair = (obj, fn, ifEmpty) => {
-	if (Array.isArray(obj)) {
-		if (!obj.length) { ifEmpty && ifEmpty(); return; }
-		if (Array.isArray(obj[0])) {
-			for (let i = 0; i !== obj.length; i++) { fn(obj[i][0], obj[i][1]); }
-		} else {
-			if (obj.length % 2) { throw 'odd'; }
-			for (let i = 0; i < obj.length; i++) { fn(obj[i], obj[++i]); }
-		}
-	} else if (Symbol.iterator in Object(obj)) {
-		const iterator = obj[Symbol.iterator]();
-		let key = iterator.next();
-		if (key.done) { ifEmpty && ifEmpty(); return; }
-		const pairs = Array.isArray(key.value);
-		if (Array.isArray(key.value)) {
-			while (!key.done) { fn(key.value[0], key.value[1]); key = iterator.next(); }
-		} else {
-			let val;
-			while (true) {
-				val = iterator.next(); if (val.done) { break; }
-				fn(key.value, val.value);
-				key = iterator.next(); if (key.done) { break; }
-			}
-		}
-	} else {
-		const keys = Object.keys(obj);
-		if (!keys.length) { ifEmpty && ifEmpty(); return; }
-		for (let i = 0; i !== keys.length; i++) { fn(keys[i], obj[keys[i]]); }
-	}
 }
 
 export const hash = (str) => {

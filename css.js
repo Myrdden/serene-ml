@@ -218,13 +218,18 @@ Object.defineProperties(RuleSet.prototype, {
 			} else { meta = { index: this.dom.cssRules.length }; this.model.set(rule, meta); this.bridge[meta.index] = meta; }
 
 			if (typeof value === 'function') {
-				let disposer; Root((d) => {
-					disposer = d; let temp = value;
+				Root((d) => {
+					let m = this.model.get(rule);
+					if (m != null && m.disposers != null) { m.disposers.delete(rule); }
+					let temp = value;
 					while (typeof temp == 'function') { temp = temp(); }
 					this.set(rule, temp);
+					m = this.model.get(rule);
+					if (m != null) {
+						(m.disposers == null) && (m.disposers = new Map());
+						m.disposers.set(rule, d);
+					}
 				});
-				(disp == null) && (disp = meta.disposers = new Map());
-				disp.set(rule, disposer);
 			} else if (typeof value === 'string') {
 				try { this.dom.deleteRule(meta.index); } catch {}
 				value = value.trim();
