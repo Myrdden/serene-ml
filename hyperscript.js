@@ -18,6 +18,18 @@ Utilities.set('hasAnyEvent', (elem, event) => {
 	return (map != null && map.has(elem));
 });
 
+const namedChars = {
+	amp: '&', apos: "'", cent: '¢', copy: '©', euro: '€', gt: '>',
+	lt: '<', nbsp: '\u00A0', pound: '£', reg: '®', quot: '"', yen: '¥'
+}
+const decodeText = (str) => str.replace(/\&([^;]+);/g, (_, char) => {
+	if (char in namedChars) { return namedChars[char]; }
+	let match; if (match = char.match(/^#x([\da-fA-F]+)$/)) { return String.fromCharCode(parseInt(match[1], 16)); }
+	if (match = char.match(/^#(\d+)$/)) { return String.fromCharCode(Number(match[1])); }
+	return '';
+});
+Utilities.set('decodeText', decodeText);
+
 const prop = (elem, key, val, isCss) => {
 	const type = typeof val;
 	if (key === '$') {
@@ -91,8 +103,8 @@ const el = (elem, val, solo) => {
 	if (val == null || type === 'boolean') { return; }
 	if (val instanceof Node) { elem.appendChild(val); }
 	else if (type === 'string' || type === 'number' || val instanceof Date) {
-		if (solo) { elem.textContent = type === 'string' ? val : val.toString(); }
-		else { elem.appendChild(document.createTextNode(type === 'string' ? val : val.toString())); }
+		if (solo) { elem.textContent = type === 'string' ? decodeText(val) : val.toString(); }
+		else { elem.appendChild(document.createTextNode(type === 'string' ? decodeText(val) : val.toString())); }
 	} else if (type === 'function') {
 		if (solo) {
 			Effect((current) => reconcile(elem, null, current, val()), null);
