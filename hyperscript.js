@@ -2,33 +2,17 @@ import { Effect, Cleanup, Signal, omit } from 'serene-js';
 import { kebab, isPlain, ElementNames } from './util.js';
 import reconcile from './reconcile.js';
 
-const Utilities = new Map();
-
-Utilities.set('isElementName', (x) => ElementNames.has(x));
-
 const Events = new Map();
 const CapturedEvents = new Map();
 
-Utilities.set('hasEvent', (elem, event) => { const map = Events.get(event); return (map != null && map.has(elem)); });
-Utilities.set('hasCapturedEvent', (elem, event) => { const map = CapturedEvents.get(event); return (map != null && map.has(elem)); });
-Utilities.set('hasAnyEvent', (elem, event) => {
+export const hasEvent = (elem, event) => { const map = Events.get(event); return (map != null && map.has(elem)); }
+export const hasCapturedEvent = (elem, event) => { const map = CapturedEvents.get(event); return (map != null && map.has(elem)); }
+export const hasAnyEvent = (elem, event) => {
 	let map = Events.get(event);
 	if (map != null && map.has(elem)) { return true; }
 	map = CapturedEvents.get(event);
 	return (map != null && map.has(elem));
-});
-
-const namedChars = {
-	amp: '&', apos: "'", cent: '¢', copy: '©', euro: '€', gt: '>',
-	lt: '<', nbsp: '\u00A0', pound: '£', reg: '®', quot: '"', yen: '¥'
 }
-const decodeText = (str) => str.replace(/\&([^;]+);/g, (_, char) => {
-	if (char in namedChars) { return namedChars[char]; }
-	let match; if (match = char.match(/^#x([\da-fA-F]+)$/)) { return String.fromCharCode(parseInt(match[1], 16)); }
-	if (match = char.match(/^#(\d+)$/)) { return String.fromCharCode(Number(match[1])); }
-	return '';
-});
-Utilities.set('decodeText', decodeText);
 
 const prop = (elem, key, val, isCss) => {
 	const type = typeof val;
@@ -179,69 +163,3 @@ const connect = (elem, val) => {
 		new Cleanup(() => elem.removeEventListener('click', listener));
 	} else { throw 'The $ (connector) property is not supported on ' + elem.nodeName.toLowerCase() + '.'; }
 }
-
-Utilities.set('isEditable', (el) => {
-	if (!el) { return false; }
-	if (el.readOnly || el.disabled) { return false; }
-	if (el.isContentEditable) { return true; }
-	const name = el.nodeName.toLowerCase();
-	return (el.nodeType === 1 && (name === 'textarea' || (name === 'input'/* && /^(?:text|date|datetime-local|email|month|number|password|search|tel|time|url|week)$/.test(el.type)*/)));
-});
-
-Utilities.set('isClickable', (el) => {
-	if (!el || el.nodeType !== 1) { return false; }
-	if (el.onClick != null || h.hasAnyEvent(el, 'click') || el.isContentEditable) { return true; }
-	const name = el.nodeName.toLowerCase();
-	if (name === 'a' && el.href != null) { return true; }
-	if (name === 'label' && el.control != null) { return h.isClickable(el.control); }
-	if (el.disabled || el.readOnly) { return false; }
-	return (name === 'select' || name === 'option' || name === 'button' || name === 'textarea' || name === 'input');
-});
-
-Utilities.set('isYScrollable', (el) => {
-	if (!el || el.nodeType !== 1) { return false; }
-	if (el.scrollTopMax != null) { return (el.scrollTopMax > 0); }
-	if (el == document.scrollingElement) { return el.scrollHeight > el.clientHeight; }
-	return ((el.scrollHeight > el.clientHeight) && (['scroll', 'auto'].includes(window.getComputedStyle(el).overflowY)));
-});
-
-Utilities.set('isXScrollable', (el) => {
-	if (!el || el.nodeType !== 1) { return false; }
-	if (el.scrollLeftMax != null) { return (el.scrollLeftMax > 0); }
-	if (el == document.scrollingElement) { return el.scrollWidth > el.clientWidth; }
-	return ((el.scrollWidth > el.clientWidth) && (['scroll', 'auto'].includes(window.getComputedStyle(el).overflowX)));
-});
-
-Utilities.set('isScrollable', (el) => (Utilities.get('isYScrollable')(el) || Utilities.get('isXScrollable')(el)));
-
-let lowerBound, refreshLowerBound;
-Utilities.set('normalizeDelta', (e, using) => {
-	let deltaY = e.deltaY * -1;
-	let deltaX = e.deltaX;
-
-	if (deltaY === 0 && deltaX === 0) { return (using ? 0 : [ 0, 0 ]); }
-
-	if (e.deltaMode === 1 || e.deltaMode === 2) {
-		const height = (e.deltaMode === 1)
-			? Number(window.getComputedStyle(e.target).getPropertyValue('font-size') || 16)
-			: window.innerHeight;
-		(deltaX !== 0) && (deltaX *= height);
-		(deltaY !== 0) && (deltaY *= height);
-	}
-
-	const abs = (deltaX == 0) ? Math.abs(deltaY) : (deltaY == 0) ? Math.abs(deltaX) : Math.max(Math.abs(deltaY), Math.abs(deltaX));
-	if (!lowerBound || (abs < lowerBound)) { lowerBound = abs; }
-	(deltaX !== 0) && (deltaX = Math[deltaX >= 1 ? 'floor' : 'ceil'](deltaX / lowerBound));
-	(deltaY !== 0) && (deltaY = Math[deltaY >= 1 ? 'floor' : 'ceil'](deltaY / lowerBound));
-
-	// if (this.getBoundingClientRect) {
-	// 	const rect = this.getBoundingClientRect();
-	// 	e.offsetX = e.clientX - rect.left;
-	// 	e.offsetY = e.clientY - rect.top;
-	// }
-
-	// refreshLowerBound && clearTimeout(refreshLowerBound);
-	// refreshLowerBound = setTimeout(() => (lowerBound = null), 1000);
-
-	return ((using === 1) ? deltaY : (using === 2) ? deltaX : [ deltaX, deltaY ]);
-});

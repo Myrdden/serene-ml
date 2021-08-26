@@ -68,3 +68,82 @@ export const ElementNames = new Set([
 	'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul',
 	'var', 'video', 'wbr', 'xmp'
 ]);
+
+export const isElementName = (name) => ElementNames.has(name)
+
+const namedChars = {
+	amp: '&', apos: "'", cent: '¢', copy: '©', euro: '€', gt: '>',
+	lt: '<', nbsp: '\u00A0', pound: '£', reg: '®', quot: '"', yen: '¥'
+}
+export const decodeText = (str) => str.replace(/\&([^;]+);/g, (_, char) => {
+	if (char in namedChars) { return namedChars[char]; }
+	let match; if (match = char.match(/^#x([\da-fA-F]+)$/)) { return String.fromCharCode(parseInt(match[1], 16)); }
+	if (match = char.match(/^#(\d+)$/)) { return String.fromCharCode(Number(match[1])); }
+	return '';
+});
+
+export const isClickable = (el) => {
+	if (!el || el.nodeType !== 1) { return false; }
+	if (el.onClick != null || h.hasAnyEvent(el, 'click') || el.isContentEditable) { return true; }
+	const name = el.nodeName.toLowerCase();
+	if (name === 'a' && el.href != null) { return true; }
+	if (name === 'label' && el.control != null) { return h.isClickable(el.control); }
+	if (el.disabled || el.readOnly) { return false; }
+	return (name === 'select' || name === 'option' || name === 'button' || name === 'textarea' || name === 'input');
+}
+
+export const isEditable = (el) => {
+	if (!el) { return false; }
+	if (el.readOnly || el.disabled) { return false; }
+	if (el.isContentEditable) { return true; }
+	const name = el.nodeName.toLowerCase();
+	return (el.nodeType === 1 && (name === 'textarea' || (name === 'input'/* && /^(?:text|date|datetime-local|email|month|number|password|search|tel|time|url|week)$/.test(el.type)*/)));
+}
+
+export const isXScrollable = (el) => {
+	if (!el || el.nodeType !== 1) { return false; }
+	if (el.scrollLeftMax != null) { return (el.scrollLeftMax > 0); }
+	if (el == document.scrollingElement) { return el.scrollWidth > el.clientWidth; }
+	return ((el.scrollWidth > el.clientWidth) && (['scroll', 'auto'].includes(window.getComputedStyle(el).overflowX)));
+}
+
+export const isYScrollable = (el) => {
+	if (!el || el.nodeType !== 1) { return false; }
+	if (el.scrollTopMax != null) { return (el.scrollTopMax > 0); }
+	if (el == document.scrollingElement) { return el.scrollHeight > el.clientHeight; }
+	return ((el.scrollHeight > el.clientHeight) && (['scroll', 'auto'].includes(window.getComputedStyle(el).overflowY)));
+}
+
+export const isScrollable = (el) => (isXScrollable(el) || isYScrollable(el));
+
+let lowerBound, refreshLowerBound;
+export const normalizeDelta = (e, using) => {
+	let deltaY = e.deltaY * -1;
+	let deltaX = e.deltaX;
+
+	if (deltaY === 0 && deltaX === 0) { return (using ? 0 : [ 0, 0 ]); }
+
+	if (e.deltaMode === 1 || e.deltaMode === 2) {
+		const height = (e.deltaMode === 1)
+			? Number(window.getComputedStyle(e.target).getPropertyValue('font-size') || 16)
+			: window.innerHeight;
+		(deltaX !== 0) && (deltaX *= height);
+		(deltaY !== 0) && (deltaY *= height);
+	}
+
+	const abs = (deltaX == 0) ? Math.abs(deltaY) : (deltaY == 0) ? Math.abs(deltaX) : Math.max(Math.abs(deltaY), Math.abs(deltaX));
+	if (!lowerBound || (abs < lowerBound)) { lowerBound = abs; }
+	(deltaX !== 0) && (deltaX = Math[deltaX >= 1 ? 'floor' : 'ceil'](deltaX / lowerBound));
+	(deltaY !== 0) && (deltaY = Math[deltaY >= 1 ? 'floor' : 'ceil'](deltaY / lowerBound));
+
+	// if (this.getBoundingClientRect) {
+	// 	const rect = this.getBoundingClientRect();
+	// 	e.offsetX = e.clientX - rect.left;
+	// 	e.offsetY = e.clientY - rect.top;
+	// }
+
+	// refreshLowerBound && clearTimeout(refreshLowerBound);
+	// refreshLowerBound = setTimeout(() => (lowerBound = null), 1000);
+
+	return ((using === 1) ? deltaY : (using === 2) ? deltaX : [ deltaX, deltaY ]);
+}
