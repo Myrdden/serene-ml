@@ -1,4 +1,4 @@
-import { Effect, Cleanup, Signal, omit } from 'serene-js';
+import { Effect, Cleanup, Atom, omit } from 'serene-js';
 import { kebab, isPlain, ElementNames } from './util.js';
 import reconcile from './reconcile.js';
 
@@ -51,7 +51,7 @@ const prop = (elem, key, val, isCss) => {
 	} else if (key === 'class' || key === 'c') {
 		if (type === 'string') { elem.className = val; }
 		else if (Array.isArray(val)) {
-			const classes = [], bump = new Signal(true);
+			const classes = [], bump = new Atom(true);
 			for (let i = 0, len = val.length; i !== len; i++) {
 				if (typeof val[i] === 'function') {
 					const fn = val[i];
@@ -87,8 +87,8 @@ const el = (elem, val, solo) => {
 	if (val == null || type === 'boolean') { return; }
 	if (val instanceof Node) { elem.appendChild(val); }
 	else if (type === 'string' || type === 'number' || val instanceof Date) {
-		if (solo) { elem.textContent = type === 'string' ? decodeText(val) : val.toString(); }
-		else { elem.appendChild(document.createTextNode(type === 'string' ? decodeText(val) : val.toString())); }
+		if (solo) { elem.textContent = type === 'string' ? val : val.toString(); }
+		else { elem.appendChild(document.createTextNode(type === 'string' ? val : val.toString())); }
 	} else if (type === 'function') {
 		if (solo) {
 			Effect((current) => reconcile(elem, null, current, val()), null);
@@ -114,9 +114,7 @@ const el = (elem, val, solo) => {
 const html = (elem, ...args) => ElementNames.has(elem) ? make(document.createElement(elem), args) : undefined;
 
 const h = new Proxy(html, {
-	get: (target, prop) => Utilities.has(prop)
-		? Utilities.get(prop)
-		: ((...args) => ElementNames.has(prop) ? make(document.createElement(prop), args) : undefined),
+	get: (target, prop) => (...args) => (ElementNames.has(prop) ? make(document.createElement(prop), args) : undefined),
 	set: () => null,
 	deleteProperty: () => null
 });
@@ -128,11 +126,11 @@ const toString = (x) => x == null ? '' : x.toString();
 
 const connect = (elem, val) => {
 	let event, on, off; const callback = val[4];
-	if (Signal.is(val)) {
+	if (Atom.is(val)) {
 		event = 'input'; on = true; off = false;
 	} else if (Array.isArray(val)) {
 		event = val[1] || 'input'; on = val[2] != null ? val[2] : true; off = val[3] != null ? val[3] : false;
-		if (!Signal.is(val[0])) { throw 'First argument of array in $ (connector) of ' + elem.nodeName.toLowerCase() + ' is not a signal.'; }
+		if (!Atom.is(val[0])) { throw 'First argument of array in $ (connector) of ' + elem.nodeName.toLowerCase() + ' is not a signal.'; }
 		val = val[0];
 	} else { throw 'Value of $ (connector) in ' + elem.nodeName.toLowerCase() + ' should be either a signal or an array of arguments, see docs.'; }
 	const input = elem instanceof HTMLInputElement;
