@@ -1,4 +1,6 @@
-export default (node, anchor, current, next) => {
+import { Effect } from 'serene-js';
+
+const reconcile = (node, anchor, current, next) => {
 	let type;
 	while ((type = typeof next) === 'function') { next = next(); }
 	if (next === current) { return current; }
@@ -57,30 +59,42 @@ export default (node, anchor, current, next) => {
 			else { current != null && node.removeChild(current); }
 			return null;
 		}
-		next = normalize(next);
+		const future = [];
+		next = normalize(next, [], future);
 		if (Array.isArray(current)) { diff(node, current, next); }
 		else {
 			current != null && node.removeChild(current);
 			for (let i = 0, len = next.length; i !== len; i++) { node.insertBefore(next[i], anchor); }
 		}
+		if (!future.length) { return next; }
+		for (let inp = future.length + 1, anc = future.length; inp -= 2, (anc -= 2) <= 0;) {
+			const input = future[inp], anchor = future[anc];
+			Effect((current) => reconcile(node, anchor, current, input()), null);
+		}
 		return next;
 	}
 
-	console.warn('While reconciling to DOM, an unsupported object was encountered. It has been ignored');
+	if (next.valueOf !== Object.prototype.valueOf) { return reconcile(node, anchor, current, next.valueOf()); }
+	if (next.toString !== Object.prototype.toString) { return reconcile(node, anchor, current, next.toString()); }
+	console.warn('While reconciling to DOM, an object with no primitive representation (as per valueOf()) was encountered. It has been ignored.');
 	console.log(next);
 }
+export default reconcile;
 
-const normalize = (input, out) => {
+const normalize = (input, out, future) => {
 	out === undefined && (out = []);
 	if (input == null || input === true || input === false) { return out; }
 	const type = typeof input;
-	if (type === 'string' || type === 'number' || input instanceof Date) {
+	if (type === 'function') {
+		const anchor = document.createTextNode('');
+		out.push(anchor); future.push(anchor, input);
+	} else if (input instanceof Node) { out.push(input); }
+	else if (type === 'string' || type === 'number' || input instanceof Date) {
 		out.push(document.createTextNode(type === 'string' ? input : input.toString()));
-	} else if (type === 'function') { normalize(input(), out); }
-	else if (input instanceof Node) { out.push(input); }
-	else if (Array.isArray(input)) { for (let i = 0, len = input.length; i !== len; i++) { normalize(input[i], out); } }
-	else if (Symbol.iterator in input) { for (let x of input) { normalize(x, out); } }
-	else { out.push(document.createTextNode(Object.prototype.toString.call(input))); }
+	else if (Array.isArray(input)) { for (let i = 0, len = input.length; i !== len; i++) { normalize(input[i], out, future); } }
+	else if (Symbol.iterator in input) { for (let x of input) { normalize(x, out, future); } }
+	else if (input.valueOf !== Object.prototype.valueOf) { normalize(input.valueOf(), out, future); }
+	else if (input.toString !== Object.prototype.toString) { normalize(input.toString(), out, future); }
 	return out;
 }
 
